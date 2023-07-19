@@ -19,9 +19,19 @@ element in a large YANG file, and looking for the exact path it
                         Only print nodes with this exact name
     --xpath-substring=XPATH_SUBSTRING
                         Only print nodes containing this substring
+    --xpath-with-prefix=XPATH_WITH_PREFIX
+                        Print prefix for base paths (default=yes)
+    --xpath-print-augments=XPATH_PRINT_AUGMENTS
+                        Print paths of models that augment others (default=no, print only augmented paths)
+    --xpath-print-all=XPATH_PRINT_ALL
+                        Print all valid keywords (default=no, only print container and list nodes),
 ```
 
 A couple of examples:
+
+```
+/usr/local/bin/pyang -p /develop/public/release/models/interfaces/* -f xpath --plugindir=<.../path/to/plugins>
+```
 
 ```
 $ pyang -f xpath tailf-ncs.yang --xpath-substring back-track

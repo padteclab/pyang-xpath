@@ -37,6 +37,18 @@ class XPathPlugin(plugin.PyangPlugin):
             optparse.make_option("--xpath-substring",
                                  dest="xpath_substring",
                                  help="Only print nodes containing this substring"),
+            optparse.make_option("--xpath-with-prefix",
+                                 dest="xpath_with_prefix",
+                                default="yes",
+                                 help="Print prefix for base paths (default=yes)"),
+            optparse.make_option("--xpath-print-augments",
+                                 dest="xpath_print_augments",
+                                 default="no",
+                                 help="Print paths of models that augment others (default=no)"),
+            optparse.make_option("--xpath-print-all",
+                                 dest="xpath_print_all",
+                                 default="no",
+                                 help="Print all valid keywords (default=no, only print container and list nodes)"),
             ]
         g = optparser.add_option_group("XPath output specific options")
         g.add_options(optlist)
@@ -95,7 +107,7 @@ def emit_tree(ctx, modules, fd, depth, path):
             b = module.search_one('belongs-to')
             if b is not None:
                 bstr = " (belongs-to %s)" % b.arg
-            fd.write(">>> %s: %s%s\n" % (module.keyword, module.arg, bstr))
+            #fd.write(">>> %s: %s%s\n" % (module.keyword, module.arg, bstr))
             printed_header = True
 
         chs = [ch for ch in module.i_children
@@ -127,9 +139,10 @@ def emit_tree(ctx, modules, fd, depth, path):
                     if not printed_header:
                         print_header()
                         printed_header = True
-                    fd.write(">>>  augment %s:\n" % augment.arg)
-                    print_children(ctx, augment.i_children, m, fd,
-                                   '', path, 'augment', depth)
+                    if ctx.opts.xpath_print_augments == "yes":
+                        fd.write(">>>  augment %s:\n" % augment.arg)
+                        print_children(ctx, augment.i_children, m, fd,
+                                       '', path, 'augment', depth)
 
         rpcs = [ch for ch in module.i_children
                 if ch.keyword == 'rpc']
@@ -181,15 +194,26 @@ def print_node(ctx, s, module, fd, prefix, path, mode, depth):
     line = prefix
     hideline = False
 
-    if s.i_module.i_modulename == module.i_modulename:
+    if s.i_module.i_modulename == module.i_modulename and ctx.opts.xpath_with_prefix == "no":
         name = s.arg
     else:
         name = s.i_module.i_prefix + ':' + s.arg
-    if s.keyword in ['list', 'container', 'leaf', 
-            'leaf-list', 'anydata', 'anyxml',
-            'notification', 'rpc', ('tailf-common', 'action')]:
+
+    keywords = ['list', 'container', 'choice', 'case', 'input', 'output', 'leaf',
+             'leaf-list', 'anydata', 'anyxml', 'notification', 'rpc', ('tailf-common', 'action')]
+
+    if ctx.opts.xpath_print_all == "yes":
+        kw_print = ['list', 'container', 'leaf',
+                    'leaf-list', 'anydata', 'anyxml',
+                    'notification', 'rpc', ('tailf-common', 'action')]
+    else:
+        kw_print = ['list', 'container']
+
+    kw_hide = [i for i in keywords if i not in kw_print]
+
+    if s.keyword in kw_print:
         line += "/" + name
-    elif s.keyword  in ['choice', 'case', 'input', 'output']:
+    elif s.keyword  in kw_hide:
         hideline = True
     else:
         fd.write(">>> Unknown keyword %s\n"%(s.keyword,))
